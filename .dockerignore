@@ -1,0 +1,33 @@
+# versioning (pas besoin pour docker)
+.git
+.gitignore
+.gitattributes
+
+# 2. Environnement
+.env
+.env.local
+.env.*.local
+
+
+# 3. Outils de développement
+node_modules/           # Sera installé par le Dockerfile
+
+# 4. Documentation & CI
+README.md
+.github/                # Workflows GitHub Actions
+
+# 5. Fichiers temporaires
+.DS_Store               # macOS
+Thumbs.db              # Windows
+.cache/
+
+# 6. Coverage & rapports de test
+coverage/
+
+# 7. Docker lui-même
+Dockerfile
+.dockerignore
+
+# 8. Builds précédents
+dist/
+build/
