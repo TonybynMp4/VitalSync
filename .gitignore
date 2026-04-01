@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.env.local
+
+# terraform
+terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!terraform.tfvars.example
