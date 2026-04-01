@@ -1,0 +1,121 @@
+name: VitalSync CI/CD
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/vitalsync-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/vitalsync-frontend
+
+jobs:
+  lint-test:
+    name: Lint & Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: backend
+        run: npm run lint
+
+      - name: Run unit tests (Jest)
+        working-directory: backend
+        run: npm test
+
+  build-push:
+    name: Build Docker
+    runs-on: ubuntu-latest
+    needs: lint-test
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+
+  deploy-staging:
+    name: Deploy Staging
+    runs-on: ubuntu-latest
+    needs: build-push
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create runtime .env for staging simulation
+        run: |
+          cat > .env <<'EOF'
+          FRONTEND_PORT=8080
+          BACKEND_PORT=3000
+          POSTGRES_PORT=5432
+          POSTGRES_DB=vitalsync_db
+          POSTGRES_USER=vitalsync_user
+          POSTGRES_PASSWORD=vitalsync_staging_password
+          EOF
+
+      - name: Deploy with docker compose (staging simulation)
+        run: docker compose up -d --build
+
+      - name: Health check backend through frontend gateway
+        run: |
+          set -e
+          for i in {1..20}; do
+            response=$(curl -fsS http://localhost:8080/api/health || true)
+            if echo "$response" | grep -q '"status":"healthy"'; then
+              echo "Health check OK: $response"
+              exit 0
+            fi
+            echo "Health check pending ($i/20)..."
+            sleep 3
+          done
+          echo "Health check failed: backend is not healthy"
+          exit 1
+
+      - name: Dump service logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Teardown staging environment
+        if: always()
+        run: docker compose down -v
