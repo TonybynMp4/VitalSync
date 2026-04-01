@@ -2,7 +2,7 @@ name: VitalSync CI/CD
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "staging", "develop"]
   pull_request:
     branches: ["main"]
 
