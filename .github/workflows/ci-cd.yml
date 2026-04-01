@@ -2,7 +2,7 @@ name: VitalSync CI/CD
 
 on:
   push:
-    branches: ["main", "staging", "develop"]
+    branches: ["develop"]
   pull_request:
     branches: ["main"]
 
@@ -89,14 +89,14 @@ jobs:
 
       - name: Create runtime .env for staging simulation
         run: |
-          cat > .env <<'EOF'
-          FRONTEND_PORT=8080
-          BACKEND_PORT=3000
-          POSTGRES_PORT=5432
-          POSTGRES_DB=vitalsync_db
-          POSTGRES_USER=vitalsync_user
-          POSTGRES_PASSWORD=vitalsync_staging_password
-          EOF
+            cat > .env <<'EOF'
+            FRONTEND_PORT=8080
+            BACKEND_PORT=3000
+            POSTGRES_PORT=5432
+            POSTGRES_DB=${{ secrets.STAGING_POSTGRES_DB }}
+            POSTGRES_USER=${{ secrets.STAGING_POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.STAGING_POSTGRES_PASSWORD }}
+            EOF
 
       - name: Deploy with docker compose (staging simulation)
         run: docker compose up -d --build
