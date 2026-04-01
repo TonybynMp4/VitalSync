@@ -5,12 +5,6 @@ app.get("/health", (req, res) => {
     res.status(200).json({ status: "healthy", checkedAt: Date.now() });
 });
 
-app.get("/api/new-endpoint", (req, res) => {
-res.json({ ok: true });
-});
-
-app.get("/api/activities", (req, res) => {
-    res.json([]);
-});
+app.use('/api', require('./routes/api'));
 
 app.listen(3000, () => console.log("VitalSync API on :3000"));
