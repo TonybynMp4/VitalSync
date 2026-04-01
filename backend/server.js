@@ -2,7 +2,7 @@ const express = require("express");
 const app = express();
 
 app.get("/health", (req, res) => {
-    res.json({ timestamp: new Date()});
+    res.status(200).json({ status: "healthy", checkedAt: Date.now() });
 });
 
 app.get("/api/new-endpoint", (req, res) => {
